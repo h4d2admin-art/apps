@@ -1,0 +1,104 @@
+name: Build Hamdars Windows x64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Build and test Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the selected source revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24 x64
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          architecture: x64
+          cache: npm
+
+      - name: Install the locked dependencies
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
+
+      # Electron 44 provides an explicit installer rather than a postinstall hook.
+      # Its bundled checksums and the normal HTTPS verification remain enabled.
+      - name: Install the pinned Electron runtime
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npx --no-install install-electron
+          if ($LASTEXITCODE -ne 0) { throw 'The pinned Electron runtime could not be installed.' }
+
+      - name: Run the application tests
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm test
+          if ($LASTEXITCODE -ne 0) { throw 'The application tests failed.' }
+
+      - name: Build the portable Windows x64 EXE
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run desktop:win -- --publish never
+          if ($LASTEXITCODE -ne 0) { throw 'The Windows x64 build failed.' }
+
+      - name: Test Electron, SQLite and the bundled application
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run test:desktop
+          if ($LASTEXITCODE -ne 0) { throw 'The desktop runtime tests failed.' }
+
+      - name: Verify the x64 payload and create its download checksum
+        id: package
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $config = Get-Content electron-builder.json -Raw | ConvertFrom-Json
+          $fileName = $config.win.artifactName.Replace('${version}', [string]$package.version)
+          $outputDirectory = [string]$config.directories.output
+          $exe = Get-Item (Join-Path $outputDirectory $fileName)
+          if ($exe.Length -le 0) { throw 'The portable Windows EXE is empty.' }
+
+          # The portable NSIS launcher can be 32-bit. Verify the actual app payload.
+          $payload = Join-Path $outputDirectory ('win-unpacked/' + $config.productName + '.exe')
+          $reader = [System.IO.BinaryReader]::new([System.IO.File]::OpenRead($payload))
+          try {
+            if ($reader.ReadUInt16() -ne 0x5A4D) { throw 'The app is missing the Windows MZ signature.' }
+            $reader.BaseStream.Position = 0x3c
+            $peOffset = $reader.ReadUInt32()
+            $reader.BaseStream.Position = $peOffset
+            if ($reader.ReadUInt32() -ne 0x4550) { throw 'The app is missing the PE signature.' }
+            if ($reader.ReadUInt16() -ne 0x8664) { throw 'The app payload is not Windows x64.' }
+            $reader.BaseStream.Position = $peOffset + 24
+            if ($reader.ReadUInt16() -ne 0x20b) { throw 'The app payload is not PE32+.' }
+          } finally { $reader.Dispose() }
+
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksumPath = Join-Path $outputDirectory 'SHA256SUMS.txt'
+          "$hash  $fileName" | Set-Content $checksumPath -Encoding ascii
+          "exe_path=$($exe.FullName)" | Add-Content $env:GITHUB_OUTPUT
+          "checksum_path=$checksumPath" | Add-Content $env:GITHUB_OUTPUT
+          "artifact_name=Hamdars-$($package.version)-Windows-x64" | Add-Content $env:GITHUB_OUTPUT
+          "Windows x64 portable EXE: **$fileName** ($($exe.Length) bytes)." | Add-Content $env:GITHUB_STEP_SUMMARY
+          "SHA256: ``$hash``" | Add-Content $env:GITHUB_STEP_SUMMARY
+          'Download the ZIP under Artifacts on this run, then extract the EXE. GitHub sign-in and repository access are required. Artifacts expire after 30 days.' | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload the Windows EXE and SHA256 for browser download
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: |
+            ${{ steps.package.outputs.exe_path }}
+            ${{ steps.package.outputs.checksum_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30

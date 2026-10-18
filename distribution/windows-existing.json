@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "tag": "v1.0.0",
+  "fileName": "Hamdars-1.0.0-Windows-x64.exe",
+  "bytes": 99944429,
+  "sha256": "b0d2826c0d488bc5326d8af729c97da90796977d0fa7690f163bb7b176117d19",
+  "architecture": "x64",
+  "format": "portable",
+  "payloadExeSha256": "b1b32ae3848c873701cd7956385b2fc65c4ae16ed83fe89fcce8565aaf98a49f"
+}

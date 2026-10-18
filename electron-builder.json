@@ -1,0 +1,21 @@
+{
+  "appId": "ir.hamdars.studyhall",
+  "productName": "Hamdars",
+  "electronVersion": "44.9.0",
+  "asar": true,
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "directories": { "output": "release", "buildResources": "desktop" },
+  "files": [
+    "desktop-build/**", "dist/**", "desktop/icon.png", "desktop/icon.ico", "package.json",
+    "!node_modules/**", "!data/**", "!test-results/**", "!release/**", "!tests/**"
+  ],
+  "win": {
+    "target": [{ "target": "portable", "arch": ["x64"] }],
+    "icon": "desktop/icon.ico",
+    "signAndEditExecutable": false,
+    "artifactName": "Hamdars-${version}-Windows-x64.exe",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "portable": { "splashImage": null, "requestExecutionLevel": "user" }
+}

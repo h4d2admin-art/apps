@@ -1,0 +1,82 @@
+name: Download existing Hamdars Windows EXE
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published release tag (no rebuilding)
+        default: v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  existing-windows-exe:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Download the existing EXE and its checksum from Release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content distribution/windows-existing.json -Raw | ConvertFrom-Json
+          if ($env:RELEASE_TAG -ne $manifest.tag) { throw 'Release tag does not match the checked-in verified artifact manifest.' }
+          gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --pattern $manifest.fileName --pattern SHA256SUMS.txt --dir existing-release
+          if ($LASTEXITCODE -ne 0) { throw 'The existing release files could not be downloaded. This workflow will not rebuild them.' }
+      - name: Verify SHA256, archive integrity and the actual Windows x64 payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content distribution/windows-existing.json -Raw | ConvertFrom-Json
+          $exe = Get-Item (Join-Path existing-release $manifest.fileName)
+          if ($exe.Length -ne $manifest.bytes) { throw 'Unexpected EXE size.' }
+          if ((Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower() -ne $manifest.sha256) { throw 'EXE checksum mismatch.' }
+          $checksumText = Get-Content existing-release/SHA256SUMS.txt -Raw
+          if ($checksumText -notmatch $manifest.sha256) { throw 'Checksum document does not match.' }
+          $sevenZip = Join-Path $env:ProgramFiles '7-Zip/7z.exe'
+          if (-not (Test-Path $sevenZip)) { throw '7-Zip is required to inspect the existing portable file; no rebuild will be attempted.' }
+          & $sevenZip t $exe.FullName | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Portable archive integrity failed.' }
+          $unpack = Join-Path $env:RUNNER_TEMP 'hamdars-verified-existing'
+          & $sevenZip x $exe.FullName "-o$unpack" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Portable archive extraction failed.' }
+          $archive = Join-Path $unpack '$PLUGINSDIR/app-64.7z'
+          & $sevenZip t $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Windows x64 payload archive integrity failed.' }
+          $payload = Join-Path $env:RUNNER_TEMP 'hamdars-payload'
+          & $sevenZip x $archive "-o$payload" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Windows payload extraction failed.' }
+          $innerExe = Join-Path $payload 'Hamdars.exe'
+          if ((Get-FileHash $innerExe -Algorithm SHA256).Hash.ToLower() -ne $manifest.payloadExeSha256) { throw 'Actual Windows x64 payload checksum mismatch.' }
+          $reader = [System.IO.BinaryReader]::new([System.IO.File]::OpenRead($innerExe))
+          try {
+            if ($reader.ReadUInt16() -ne 0x5A4D) { throw 'Missing Windows MZ signature.' }
+            $reader.BaseStream.Position = 0x3c
+            $peOffset = $reader.ReadUInt32()
+            $reader.BaseStream.Position = $peOffset
+            if ($reader.ReadUInt32() -ne 0x4550) { throw 'Missing PE signature.' }
+            if ($reader.ReadUInt16() -ne 0x8664) { throw 'The actual app is not Windows x64.' }
+            $reader.BaseStream.Position = $peOffset + 24
+            if ($reader.ReadUInt16() -ne 0x20b) { throw 'The actual app is not PE32+.' }
+          } finally { $reader.Dispose() }
+          "Existing Windows x64 file verified. No rebuild performed. SHA256: $($manifest.sha256)" | Add-Content $env:GITHUB_STEP_SUMMARY
+      - name: Make the unchanged Windows EXE downloadable from this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hamdars-1.0.0-Windows-x64-existing
+          path: |
+            existing-release/*.exe
+            existing-release/SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
