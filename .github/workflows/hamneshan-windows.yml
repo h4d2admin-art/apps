@@ -1,0 +1,94 @@
+name: Build Hamneshan Windows x64
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'hamneshan/**'
+      - '.github/workflows/hamneshan-windows.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Build and test Hamneshan Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: hamneshan
+    steps:
+      - name: Check out the selected revision
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24 x64
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          architecture: x64
+          cache: npm
+          cache-dependency-path: hamneshan/package-lock.json
+
+      - name: Install the locked dependencies and pinned Electron runtime
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
+          npx --no-install install-electron
+          if ($LASTEXITCODE -ne 0) { throw 'The pinned Electron runtime could not be installed.' }
+
+      - name: Run the application tests
+        run: |
+          npm test
+          if ($LASTEXITCODE -ne 0) { throw 'The application tests failed.' }
+
+      - name: Build the portable Windows x64 EXE
+        run: |
+          npm run desktop:win
+          if ($LASTEXITCODE -ne 0) { throw 'The Windows x64 build failed.' }
+
+      - name: Test the real Electron app and persistent local storage
+        run: |
+          npm run test:desktop
+          if ($LASTEXITCODE -ne 0) { throw 'The Electron desktop smoke tests failed.' }
+
+      - name: Verify the x64 payload and create its checksum
+        id: package
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $config = Get-Content electron-builder.json -Raw | ConvertFrom-Json
+          $fileName = $config.win.artifactName.Replace('${version}', [string]$package.version)
+          $exe = Get-Item (Join-Path $config.directories.output $fileName)
+          if ($exe.Length -le 0) { throw 'The portable Windows EXE is empty.' }
+          $payload = Join-Path $config.directories.output ('win-unpacked/' + $config.productName + '.exe')
+          $reader = [System.IO.BinaryReader]::new([System.IO.File]::OpenRead($payload))
+          try {
+            if ($reader.ReadUInt16() -ne 0x5A4D) { throw 'Missing Windows MZ signature.' }
+            $reader.BaseStream.Position = 0x3c
+            $peOffset = $reader.ReadUInt32()
+            $reader.BaseStream.Position = $peOffset
+            if ($reader.ReadUInt32() -ne 0x4550) { throw 'Missing Windows PE signature.' }
+            if ($reader.ReadUInt16() -ne 0x8664) { throw 'The application payload is not Windows x64.' }
+          } finally { $reader.Dispose() }
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksumPath = Join-Path $config.directories.output 'SHA256SUMS.txt'
+          "$hash  $fileName" | Set-Content $checksumPath -Encoding ascii
+          "exe_path=$($exe.FullName)" | Add-Content $env:GITHUB_OUTPUT
+          "checksum_path=$checksumPath" | Add-Content $env:GITHUB_OUTPUT
+          "artifact_name=Hamneshan-$($package.version)-Windows-x64" | Add-Content $env:GITHUB_OUTPUT
+          "Windows x64 portable EXE: **$fileName** ($($exe.Length) bytes)." | Add-Content $env:GITHUB_STEP_SUMMARY
+          'Download the ZIP under Artifacts and extract the EXE. Artifacts are retained for 30 days. Private school records are not included in this build.' | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload the EXE and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: |
+            ${{ steps.package.outputs.exe_path }}
+            ${{ steps.package.outputs.checksum_path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30

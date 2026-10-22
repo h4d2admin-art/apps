@@ -1,0 +1,23 @@
+{
+  "appId": "ir.hamneshan.directory",
+  "productName": "Hamneshan",
+  "electronVersion": "44.9.0",
+  "asar": true,
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "compression": "normal",
+  "directories": { "output": "release", "buildResources": "desktop" },
+  "files": [
+    "desktop/**", "dist/**", "package.json",
+    "!node_modules/**", "!work/**", "!test-results/**", "!release/**",
+    "!**/school-data.hamneshan.json"
+  ],
+  "win": {
+    "target": [{ "target": "portable", "arch": ["x64"] }],
+    "icon": "desktop/icon.ico",
+    "signAndEditExecutable": false,
+    "artifactName": "Hamneshan-${version}-Windows-x64.exe",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "portable": { "splashImage": null, "requestExecutionLevel": "user" }
+}

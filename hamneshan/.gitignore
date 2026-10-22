@@ -1,0 +1,8 @@
+node_modules/
+release/
+private/
+work/
+.openai/
+*.hamneshan.json
+*.xlsx
+*.log
