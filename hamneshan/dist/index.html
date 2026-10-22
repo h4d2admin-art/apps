@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#143d39"><title>هم‌نشان | دفتر هوشمند مدرسه</title><meta name="description" content="یک نشانه کافی‌ست؛ جست‌وجوی دانش‌آموزان و دبیران، شناسایی تماس و تولدهای مدرسه"><link rel="icon" href="./assets/favicon.svg"><link rel="stylesheet" href="./style.css"></head>
+<body>
+<aside class="sidebar">
+ <a class="brand" href="#"><span class="brand-mark">هـ<span></span></span><span>هم‌نشان<small>دفتر هوشمند مدرسه</small></span></a>
+ <div class="school-badge"><div id="schoolLogo" class="school-logo"><i data-lucide="graduation-cap"></i></div><div><b id="schoolName">مدرسهٔ شما</b><small>همهٔ آدم‌های مدرسه، یک‌جا</small></div></div>
+ <div class="nav-label">میز کار شما</div>
+ <nav aria-label="بخش‌های برنامه">
+  <button class="nav-item active" data-nav="all"><i data-lucide="layout-dashboard"></i>جست‌وجوی سریع<span class="nav-dot"></span></button>
+  <button class="nav-item" data-nav="student"><i data-lucide="graduation-cap"></i>دانش‌آموزان<span id="navStudents"></span></button>
+  <button class="nav-item" data-nav="teacher"><i data-lucide="notebook-pen"></i>دبیران<span id="navTeachers"></span></button>
+  <button class="nav-item" data-nav="birthdays"><i data-lucide="cake"></i>تقویم تولدها<span id="navBirthdays" class="birthday-count"></span></button>
+  <button class="nav-item" data-nav="jobs"><i data-lucide="briefcase-business"></i>جست‌وجوی شغلی</button>
+ </nav>
+ <div class="nav-label second-label">اطلاعات مدرسه</div>
+ <button class="nav-item" data-action="import"><i data-lucide="folder-input"></i>ورود فایل‌ها</button>
+ <button class="nav-item" data-action="settings"><i data-lucide="sliders-horizontal"></i>تنظیمات و پشتیبان</button>
+ <div class="sidebar-bottom"><div class="local-icon"><i data-lucide="hard-drive"></i></div><b>اطلاعات، پیش خودتان</b><p>داده‌ها در مرورگر این دستگاه ذخیره می‌شوند.</p><span class="status-dot"></span><small id="saveState">آمادهٔ استفاده</small></div>
+ <div class="sidebar-footer">با حوصله برای آدم‌های مدرسه <span>✦</span></div>
+</aside>
+<main>
+ <header class="topbar"><div class="breadcrumb">میز کار <span>/</span> <b id="sectionName">جست‌وجوی سریع</b></div><div class="topbar-end"><span id="todayDate" class="date-pill"></span><button class="icon-button" title="راهنما" data-action="help"><i data-lucide="circle-help"></i></button><span class="admin-avatar">م</span></div></header>
+ <div class="content">
+  <section class="heading-row"><div><div class="eyebrow"><span></span>یک روز خوب، یک مدرسهٔ منظم</div><h1>هر کسی، با یک نشانه.</h1><p>شماره، نام یا شغل را بنویسید؛ بقیه‌اش با هم‌نشان.</p></div><button class="button primary" data-action="import"><i data-lucide="plus"></i>افزودن اطلاعات</button></section>
+  <div id="demoBanner" class="demo-banner"><span><i data-lucide="flask-conical"></i> این‌ها داده‌های نمونه‌اند؛ برای شروع، فایل‌های مدرسه را وارد کنید.</span><button data-action="import">ورود فایل واقعی <i data-lucide="arrow-up-left"></i></button></div>
+  <section class="search-hero" aria-label="جست‌وجوی افراد">
+   <div class="hero-content"><span class="small-label"><i data-lucide="sparkles"></i>جست‌وجوی هوشمند مدرسه</span><h2>تلفن زنگ می‌خورد؟<br>چهار رقم آخر، کافی‌ست.</h2><p>پیدا کنید چه کسی تماس گرفته و با کدام دانش‌آموز نسبت دارد.</p><div class="search-box"><i data-lucide="search"></i><input id="searchInput" type="search" autocomplete="off" placeholder="نام، ۴ رقم آخر شماره، شغل یا هر نشانه‌ای…" aria-label="جست‌وجوی اطلاعات"><button class="search-clear" id="clearSearch" title="پاک‌کردن جست‌وجو" hidden>×</button><kbd>Ctrl K</kbd></div><div class="search-examples"><span>امتحان کنید:</span><button data-query="۴۸۲۱">۴۸۲۱ <i data-lucide="phone"></i></button><button data-query="پزشک">پزشک <i data-lucide="stethoscope"></i></button><span class="search-hint">موبایل و تلفن ثابت</span></div></div>
+   <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="spark spark-one">✦</span><span class="spark spark-two">✦</span><div class="floating-label">تماس آشنا <span></span></div><div class="phone-tile"><i data-lucide="phone-call"></i></div><div class="match-pill"><span class="mini-avatar">آ</span><div><b>یک نشانه، یک آشنایی</b><small>خانوادهٔ بزرگ مدرسه</small></div><span class="match-check">✓</span></div><span class="art-dots">•••</span></div>
+  </section>
+  <section class="stats-grid" id="stats" aria-label="آمار مدرسه"></section>
+  <section class="workspace-grid">
+   <div class="directory-panel panel"><div class="panel-heading"><div><h2 id="resultsTitle">آدم‌های مدرسه</h2><span id="resultCount" class="muted"></span></div><span class="live-tag"><span></span> جست‌وجوی آنی</span></div><div class="filter-row"><div class="tabs" role="group" aria-label="نوع فرد"><button class="active" data-type="all">همه</button><button data-type="student">دانش‌آموزان</button><button data-type="teacher">دبیران</button></div><button id="filterToggle" class="filter-button"><i data-lucide="list-filter"></i>فیلتر<span id="filterDot" hidden></span></button></div><div id="filters" class="filters" hidden><label>شغل والدین یا تخصص دبیر<input id="jobFilter" placeholder="مثلاً مهندس، پزشک، ریاضی"></label><label>کلاس<select id="classFilter"><option value="">همهٔ کلاس‌ها</option></select></label><button class="text-button" id="resetFilters">پاک‌کردن فیلترها</button></div><div id="searchNotice" class="search-notice" hidden></div><div class="list-head"><span>نام و مشخصات</span><span>اطلاعات تماس / نتیجهٔ جست‌وجو</span></div><div id="results" class="results" aria-live="polite"></div><div class="list-footer"><span id="listFooter"></span><div><button class="icon-button" id="prevPage" title="صفحه قبل"><i data-lucide="chevron-right"></i></button><span id="pageNumber"></span><button class="icon-button" id="nextPage" title="صفحه بعد"><i data-lucide="chevron-left"></i></button></div></div></div>
+   <aside class="profile-panel panel" id="profile" aria-label="مشخصات فرد"></aside>
+  </section>
+  <section class="birthday-section" id="birthdaySection"><div class="birthday-intro"><span class="small-label">بهانه‌ای برای لبخند</span><h2>امروز، روزِ آن‌هاست.</h2><p>یک تبریک کوچک، یک خاطرهٔ قشنگ.<br>کارت تبریک را با عکس و پیام خودتان بسازید.</p><div class="birthday-tabs"><button class="active" data-days="0">امروز</button><button data-days="7">این هفته</button><button data-days="30">۳۰ روز آینده</button></div><div class="cake-art" aria-hidden="true"><i data-lucide="cake"></i><span>✦</span><span>✧</span></div></div><div id="birthdayList" class="birthday-list"></div></section>
+  <footer class="page-footer"><span>هم‌نشان <b>✦</b> جایی برای تمام نشانه‌ها</span><span>تاریخ‌ها بر اساس تقویم شمسی و ساعت تهران</span></footer>
+ </div>
+</main>
+<dialog id="mainDialog"><div class="dialog-top"><h2 id="dialogTitle"></h2><button class="icon-button" id="closeDialog" aria-label="بستن"><i data-lucide="x"></i></button></div><div id="dialogContent"></div></dialog>
+<div id="toast" role="status" hidden></div>
+<script src="./assets/xlsx.full.min.js"></script><script src="./assets/lucide.min.js"></script><script type="module" src="./app.js"></script>
+</body></html>

@@ -32,3 +32,7 @@ service-account*.json
 *.7z
 .cache/
 .DS_Store
+
+# Hamneshan is a buildless app; these are its authored offline application files.
+!hamneshan/dist/
+!hamneshan/dist/**
