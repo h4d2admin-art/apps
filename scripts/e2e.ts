@@ -130,6 +130,38 @@ try {
   assert.deepEqual(await state(), JSON.parse(backup));
   console.log('Backup download, validated restore and persistence across reload passed');
 
+  // Reach backup through the menu with the same wheel/keyboard input as a user.
+  // Clicking alone would let Playwright scroll an otherwise unreachable link.
+  for (const viewport of [{ width: 1024, height: 600 }, { width: 800, height: 450 }, { width: 390, height: 480 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto(`${base}/#dashboard`);
+    if (viewport.width <= 760) await page.getByRole('button', { name: 'باز کردن فهرست', exact: true }).click();
+    const sidebar = page.locator('.sidebar');
+    const settingsLink = sidebar.getByRole('link', { name: 'تنظیمات و پشتیبان', exact: true });
+    await sidebar.hover({ position: { x: 100, y: 180 } });
+    await page.mouse.wheel(0, 2000);
+    await expect(settingsLink).toBeInViewport({ ratio: 1 });
+    assert.equal(await page.evaluate(() => scrollY), 0, 'Scrolling the menu must leave the page in place');
+    await settingsLink.click();
+    await expect(page.getByRole('heading', { name: 'تنظیمات و پشتیبان', exact: true })).toBeVisible();
+    const backupDownload = page.waitForEvent('download');
+    await page.getByRole('link', { name: 'دریافت نسخه پشتیبان', exact: true }).click();
+    const backupFile = await backupDownload;
+    await backupFile.saveAs(join(temp, 'menu-backup.json'));
+    assert.deepEqual(JSON.parse(readFileSync(join(temp, 'menu-backup.json'), 'utf8')), await state());
+    await page.goto(`${base}/#dashboard`);
+    if (viewport.width <= 760) await page.getByRole('button', { name: 'باز کردن فهرست', exact: true }).click();
+    await sidebar.locator('.brand').focus();
+    for (let tab = 0; tab < 8; tab++) await page.keyboard.press('Tab');
+    await expect(settingsLink).toBeFocused();
+    await expect(settingsLink).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: 'تنظیمات و پشتیبان', exact: true })).toBeVisible();
+    await page.screenshot({ path: join(output, `settings-short-${viewport.width}x${viewport.height}.png`), fullPage: true, animations: 'disabled' });
+  }
+  console.log('Short desktop/mobile menus: wheel and keyboard access to settings, working backup downloads passed');
+  await page.setViewportSize({ width: 1440, height: 1050 });
+
   await page.goto(`${base}/#dashboard`);
   await page.screenshot({ path: join(output, 'dashboard-desktop.png'), fullPage: true, animations: 'disabled' });
   await page.setViewportSize({ width: 390, height: 844 });
